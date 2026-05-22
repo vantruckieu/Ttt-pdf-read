@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trình Trích Xuất Truyện PDF (Bản Streaming)</title>
-    <!-- Thư viện PDF.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <title>Trình Trích Xuất Truyện PDF (Siêu Ổn Định)</title>
+    
+    <!-- Đổi sang JSDelivr: Ổn định và nhanh hơn ở mạng Việt Nam -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
+    
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -60,65 +62,35 @@
             border-radius: 8px;
             margin-bottom: 15px;
         }
-        .selection-panel label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
+        .selection-panel label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
         .selection-panel select, .selection-panel input[type="number"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 15px;
-            box-sizing: border-box;
+            width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ced4da;
+            border-radius: 6px; font-size: 15px; box-sizing: border-box;
         }
         
         .btn-load {
-            background: #28a745;
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
+            background: #28a745; color: white; border: none; width: 100%; padding: 12px;
+            border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer;
             box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
         }
         .btn-load:active { background: #218838; }
         .btn-load:disabled { background: #6c757d; cursor: not-allowed; }
 
         .status { 
-            font-size: 14px; 
-            color: #65676b; 
-            text-align: center;
-            font-weight: bold; 
-            word-wrap: break-word;
-            margin-top: 10px;
-            padding: 8px;
-            border-radius: 4px;
+            font-size: 14px; text-align: center; font-weight: bold; 
+            word-wrap: break-word; margin-top: 10px; padding: 10px; border-radius: 4px;
         }
         .status.error { background: #ffe6e6; color: #dc3545; border: 1px solid #dc3545; }
-        .status.success { background: #e6ffe6; color: #28a745; }
-        .status.loading { background: #e6f2ff; color: #0056b3; }
+        .status.success { background: #e6ffe6; color: #28a745; border: 1px solid #28a745; }
+        .status.loading { background: #e6f2ff; color: #0056b3; border: 1px solid #0056b3; }
         
         #output { 
-            background: #ffffff; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            min-height: 60vh; 
-            font-size: 18px; 
-            outline: none;
-            word-wrap: break-word;
+            background: #ffffff; padding: 20px; border-radius: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 60vh; font-size: 18px; 
+            outline: none; word-wrap: break-word;
         }
         .page-text {
-            margin-bottom: 20px;
-            border-bottom: 1px dashed #ccc;
-            padding-bottom: 10px;
+            margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;
             white-space: pre-wrap; 
         }
     </style>
@@ -126,48 +98,43 @@
 <body>
 
     <div class="header-card">
-        <h2>📖 Đọc Truyện PDF Tối Ưu RAM</h2>
+        <h2>📖 Trình Đọc PDF Truyện (Mới)</h2>
         
         <div class="file-upload-wrapper">
-            <span>📂 1. Chọn file PDF truyện</span>
+            <span>📂 1. Chạm vào đây để chọn file PDF</span>
             <input type="file" id="pdf-upload" accept="application/pdf" />
         </div>
 
         <div id="selection-panel" class="selection-panel">
             <div id="outline-container" style="display: none;">
-                <label>📄 2. Chọn phần muốn đọc (Mục Lục):</label>
+                <label>📄 2. Chọn chương (File có Mục Lục):</label>
                 <select id="outline-start"></select>
                 <select id="outline-end"></select>
             </div>
 
             <div id="page-container" style="display: none;">
-                <label>📄 2. Chọn số trang muốn đọc:</label>
-                <label style="font-weight: normal; font-size: 13px;">Từ trang:</label>
-                <input type="number" id="page-start" min="1" value="1">
-                <label style="font-weight: normal; font-size: 13px;">Đến trang (Tối đa <span id="max-pages">...</span>):</label>
-                <input type="number" id="page-end" min="1" value="10">
+                <label>📄 2. Nhập số trang muốn đọc:</label>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <span style="font-size: 12px;">Từ trang:</span>
+                        <input type="number" id="page-start" min="1" value="1">
+                    </div>
+                    <div style="flex: 1;">
+                        <span style="font-size: 12px;">Đến trang (Max: <span id="max-pages">...</span>):</span>
+                        <input type="number" id="page-end" min="1" value="10">
+                    </div>
+                </div>
             </div>
 
-            <button id="btn-load-text" class="btn-load">▶️ 3. Bắt Đầu Bóc Chữ</button>
+            <button id="btn-load-text" class="btn-load">▶️ 3. Bắt Đầu Đọc</button>
         </div>
         
-        <div id="status-message" class="status">Đang chờ file...</div>
+        <div id="status-message" class="status loading">Đang kiểm tra hệ thống...</div>
     </div>
 
-    <div id="output" contenteditable="true">Văn bản truyện sẽ hiển thị ở đây sau khi bạn bấm Bắt Đầu Bóc Chữ...</div>
+    <div id="output" contenteditable="true">Nội dung truyện sẽ hiện ở đây...</div>
 
     <script>
-        // Cấu hình Worker của PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-        // Bắt lỗi toàn cục hiển thị lên màn hình
-        window.addEventListener('error', function(event) {
-            showStatus('error', "Lỗi hệ thống: " + event.message);
-        });
-        window.addEventListener('unhandledrejection', function(event) {
-            showStatus('error', "Lỗi tiến trình ngầm: " + event.reason);
-        });
-
         const fileInput = document.getElementById('pdf-upload');
         const outputDiv = document.getElementById('output');
         const statusMsg = document.getElementById('status-message');
@@ -191,28 +158,38 @@
             statusMsg.textContent = text;
         }
 
-        fileInput.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
+        // 1. Kiểm tra xem JavaScript có chạy không
+        window.onload = function() {
+            if (typeof pdfjsLib === 'undefined') {
+                showStatus('error', '❌ Lỗi: Trình duyệt chặn tải PDF.js. Vui lòng tắt chặn quảng cáo hoặc đổi mạng.');
+            } else {
+                showStatus('success', '✅ Hệ thống đã sẵn sàng. Vui lòng chọn file.');
+            }
+        };
 
-            showStatus('loading', "⏳ Đang phân tích file (Streaming Mode)...");
-            selectionPanel.style.display = "none";
-            outputDiv.innerHTML = "";
-            currentPdf = null;
-            outlineData = [];
-            
+        // 2. Xử lý khi chọn file (Bắt lỗi ngay lập tức)
+        fileInput.addEventListener('change', async (event) => {
             try {
-                // SỬ DỤNG STREAMING (URL.createObjectURL) THAY VÌ ĐỌC TOÀN BỘ VÀO RAM
-                const fileUrl = URL.createObjectURL(file);
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // Hiện status NGAY LẬP TỨC để báo hiệu có phản hồi
+                showStatus('loading', "⏳ Đã nhận file. Đang khởi động bộ giải mã...");
+                selectionPanel.style.display = "none";
+                outputDiv.innerHTML = "";
                 
-                // Tải PDF bằng URL
+                // Khởi tạo worker bên trong block này để bắt lỗi
+                if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
+                }
+
+                const fileUrl = URL.createObjectURL(file);
+                showStatus('loading', "⏳ Đang quét cấu trúc file (có thể mất vài giây)...");
+                
                 const loadingTask = pdfjsLib.getDocument({url: fileUrl});
                 currentPdf = await loadingTask.promise;
                 totalPages = currentPdf.numPages;
                 
-                showStatus('loading', `⏳ Đang đọc cấu trúc ${totalPages} trang...`);
-                
-                // Thử lấy Mục Lục
                 const outline = await currentPdf.getOutline();
                 
                 if (outline && outline.length > 0) {
@@ -228,19 +205,17 @@
                 }
 
                 selectionPanel.style.display = "block";
-                showStatus('success', `✅ File nạp thành công! (${totalPages} trang). Hãy chọn phần muốn đọc.`);
+                showStatus('success', `✅ File hợp lệ (${totalPages} trang). Vui lòng chọn giới hạn đọc!`);
 
             } catch (error) {
-                console.error(error);
-                showStatus('error', "❌ Không thể đọc file PDF: " + error.message);
+                console.error("Lỗi nạp file:", error);
+                showStatus('error', "❌ Lỗi đọc file: " + (error.message || "Không rõ nguyên nhân"));
             }
         });
 
-        // Đệ quy lấy Mục lục
+        // 3. Hàm trích xuất mục lục
         async function parseOutline(outlineItems) {
-            outlineStartSel.innerHTML = "";
-            outlineEndSel.innerHTML = "";
-            outlineData = [];
+            outlineStartSel.innerHTML = ""; outlineEndSel.innerHTML = ""; outlineData = [];
 
             async function traverse(items, depth = "") {
                 for (let item of items) {
@@ -253,16 +228,12 @@
                                 pageNum = pageIndex + 1;
                             }
                         }
-                    } catch (e) {
-                        console.warn("Lỗi đọc một phần mục lục", e);
-                    }
+                    } catch (e) {} 
                     
                     if (pageNum !== null) {
                         outlineData.push({ title: depth + item.title, pageNum: pageNum });
                     }
-                    if (item.items && item.items.length > 0) {
-                        await traverse(item.items, depth + "— ");
-                    }
+                    if (item.items && item.items.length > 0) await traverse(item.items, depth + "— ");
                 }
             }
 
@@ -278,23 +249,17 @@
 
             outlineData.forEach((item, index) => {
                 let optStart = document.createElement('option');
-                optStart.value = index;
-                optStart.textContent = `Trang ${item.pageNum}: ${item.title}`;
+                optStart.value = index; optStart.textContent = `[Trang ${item.pageNum}] ${item.title}`;
                 outlineStartSel.appendChild(optStart);
 
                 let optEnd = document.createElement('option');
-                optEnd.value = index;
-                optEnd.textContent = `Trang ${item.pageNum}: ${item.title}`;
+                optEnd.value = index; optEnd.textContent = `[Trang ${item.pageNum}] ${item.title}`;
                 outlineEndSel.appendChild(optEnd);
             });
-
-            if (outlineData.length > 1) {
-                outlineEndSel.value = 1; 
-            } else {
-                outlineEndSel.value = 0;
-            }
+            outlineEndSel.value = outlineData.length > 1 ? 1 : 0;
         }
 
+        // 4. Nút bấm load chữ
         btnLoadText.addEventListener('click', async () => {
             if (!currentPdf) return;
 
@@ -303,11 +268,7 @@
             if (outlineContainer.style.display === "block") {
                 let startIndex = parseInt(outlineStartSel.value);
                 let endIndex = parseInt(outlineEndSel.value);
-                
-                if (startIndex > endIndex) {
-                    alert("Phần kết thúc phải nằm sau phần bắt đầu!");
-                    return;
-                }
+                if (startIndex > endIndex) return alert("Phần kết thúc phải nằm sau phần bắt đầu!");
                 startPage = outlineData[startIndex].pageNum;
                 endPage = (endIndex + 1 < outlineData.length) ? outlineData[endIndex + 1].pageNum - 1 : totalPages;
                 if (endPage < startPage) endPage = startPage;
@@ -316,10 +277,7 @@
                 endPage = parseInt(pageEndInp.value);
                 if (startPage < 1) startPage = 1;
                 if (endPage > totalPages) endPage = totalPages;
-                if (startPage > endPage) {
-                    alert("Trang bắt đầu không thể lớn hơn trang kết thúc!");
-                    return;
-                }
+                if (startPage > endPage) return alert("Trang bắt đầu không thể lớn hơn trang kết thúc!");
             }
 
             outputDiv.innerHTML = "";
@@ -327,20 +285,15 @@
 
             try {
                 for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
-                    showStatus('loading', `⏳ Đang bóc chữ trang ${pageNum} / ${endPage}...`);
+                    showStatus('loading', `⏳ Đang đọc chữ trang ${pageNum} / ${endPage}...`);
                     
                     const page = await currentPdf.getPage(pageNum);
                     const textContent = await page.getTextContent();
                     
-                    let lastY = -1;
-                    let pageText = "";
-                    
+                    let lastY = -1; let pageText = "";
                     textContent.items.forEach(item => {
-                        if (lastY !== item.transform[5] && lastY !== -1) {
-                            pageText += "\n";
-                        }
-                        pageText += item.str;
-                        lastY = item.transform[5];
+                        if (lastY !== item.transform[5] && lastY !== -1) pageText += "\n";
+                        pageText += item.str; lastY = item.transform[5];
                     });
                     
                     if (pageText.trim().length > 0) {
@@ -350,18 +303,13 @@
                         outputDiv.appendChild(pageDiv);
                     }
                     
-                    // Xóa cache trang để giải phóng RAM
                     page.cleanup();
-
-                    // Nhường luồng hiển thị
-                    if (pageNum % 3 === 0) {
-                        await new Promise(resolve => setTimeout(resolve, 10));
-                    }
+                    // Chống treo máy
+                    if (pageNum % 2 === 0) await new Promise(resolve => setTimeout(resolve, 10));
                 }
-                showStatus('success', `✅ Đã load xong nội dung từ trang ${startPage} đến ${endPage}!`);
+                showStatus('success', `✅ Hoàn tất tải từ trang ${startPage} đến ${endPage}!`);
             } catch (error) {
-                console.error(error);
-                showStatus('error', "❌ Lỗi khi bóc chữ: " + error.message);
+                showStatus('error', "❌ Lỗi hiển thị chữ: " + error.message);
             } finally {
                 btnLoadText.disabled = false;
             }
@@ -369,3 +317,4 @@
     </script>
 </body>
 </html>
+
