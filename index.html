@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trình Trích Xuất Truyện PDF (Siêu Ổn Định)</title>
+    <title>Trình Đọc Truyện DOCX (Siêu Nhẹ)</title>
     
-    <!-- Đổi sang JSDelivr: Ổn định và nhanh hơn ở mạng Việt Nam -->
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
+    <!-- Sử dụng thư viện Mammoth.js chuyên dụng để đọc file DOCX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
     
     <style>
         body { 
@@ -54,28 +54,6 @@
             cursor: pointer;
         }
 
-        .selection-panel {
-            display: none;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .selection-panel label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
-        .selection-panel select, .selection-panel input[type="number"] {
-            width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ced4da;
-            border-radius: 6px; font-size: 15px; box-sizing: border-box;
-        }
-        
-        .btn-load {
-            background: #28a745; color: white; border: none; width: 100%; padding: 12px;
-            border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer;
-            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
-        }
-        .btn-load:active { background: #218838; }
-        .btn-load:disabled { background: #6c757d; cursor: not-allowed; }
-
         .status { 
             font-size: 14px; text-align: center; font-weight: bold; 
             word-wrap: break-word; margin-top: 10px; padding: 10px; border-radius: 4px;
@@ -89,62 +67,92 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 60vh; font-size: 18px; 
             outline: none; word-wrap: break-word;
         }
-        .page-text {
-            margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;
-            white-space: pre-wrap; 
-        }
+        
+        /* Căn chỉnh lại văn bản DOCX khi hiển thị để đọc truyện dễ hơn */
+        #output p { margin-bottom: 15px; }
+        #output h1, #output h2, #output h3 { color: #1877f2; margin-top: 30px; }
     </style>
 </head>
 <body>
 
     <div class="header-card">
-        <h2>📖 Trình Đọc PDF Truyện (Mới)</h2>
+        <h2>📖 Trình Đọc DOCX Truyện</h2>
         
         <div class="file-upload-wrapper">
-            <span>📂 1. Chạm vào đây để chọn file PDF</span>
-            <input type="file" id="pdf-upload" accept="application/pdf" />
-        </div>
-
-        <div id="selection-panel" class="selection-panel">
-            <div id="outline-container" style="display: none;">
-                <label>📄 2. Chọn chương (File có Mục Lục):</label>
-                <select id="outline-start"></select>
-                <select id="outline-end"></select>
-            </div>
-
-            <div id="page-container" style="display: none;">
-                <label>📄 2. Nhập số trang muốn đọc:</label>
-                <div style="display: flex; gap: 10px;">
-                    <div style="flex: 1;">
-                        <span style="font-size: 12px;">Từ trang:</span>
-                        <input type="number" id="page-start" min="1" value="1">
-                    </div>
-                    <div style="flex: 1;">
-                        <span style="font-size: 12px;">Đến trang (Max: <span id="max-pages">...</span>):</span>
-                        <input type="number" id="page-end" min="1" value="10">
-                    </div>
-                </div>
-            </div>
-
-            <button id="btn-load-text" class="btn-load">▶️ 3. Bắt Đầu Đọc</button>
+            <span>📂 Chạm vào đây để chọn file DOCX</span>
+            <input type="file" id="docx-upload" accept=".docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
         </div>
         
         <div id="status-message" class="status loading">Đang kiểm tra hệ thống...</div>
     </div>
 
-    <div id="output" contenteditable="true">Nội dung truyện sẽ hiện ở đây...</div>
+    <div id="output" contenteditable="true">Nội dung truyện sẽ hiện ở đây, mượt mà và không lo tràn RAM...</div>
 
     <script>
-        const fileInput = document.getElementById('pdf-upload');
+        const fileInput = document.getElementById('docx-upload');
         const outputDiv = document.getElementById('output');
         const statusMsg = document.getElementById('status-message');
-        const selectionPanel = document.getElementById('selection-panel');
-        const outlineContainer = document.getElementById('outline-container');
-        const pageContainer = document.getElementById('page-container');
-        
-        const outlineStartSel = document.getElementById('outline-start');
-        const outlineEndSel = document.getElementById('outline-end');
-        const pageStartInp = document.getElementById('page-start');
+
+        function showStatus(type, text) {
+            statusMsg.className = `status ${type}`;
+            statusMsg.textContent = text;
+        }
+
+        window.onload = function() {
+            if (typeof mammoth === 'undefined') {
+                showStatus('error', '❌ Lỗi: Không tải được thư viện xử lý. Vui lòng kiểm tra mạng.');
+            } else {
+                showStatus('success', '✅ Hệ thống đã sẵn sàng. Vui lòng chọn file DOCX.');
+            }
+        };
+
+        fileInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showStatus('loading', "⏳ Đang giải nén và đọc nội dung file DOCX...");
+            outputDiv.innerHTML = "";
+
+            const reader = new FileReader();
+
+            reader.onload = function(loadEvent) {
+                const arrayBuffer = loadEvent.target.result;
+
+                // Mammoth convert DOCX sang HTML siêu nhanh
+                mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+                    .then(function(result) {
+                        const htmlContent = result.value; 
+                        
+                        if (htmlContent.trim() === "") {
+                            showStatus('error', "❌ File DOCX không có chữ hoặc bị lỗi mã hóa.");
+                            return;
+                        }
+
+                        // Đẩy toàn bộ HTML vào khung hiển thị
+                        outputDiv.innerHTML = htmlContent;
+                        showStatus('success', '✅ Tải xong thành công! Bạn có thể bắt đầu đọc.');
+                        
+                        // Nếu có cảnh báo từ file gốc (vd: ảnh bị lỗi không hiển thị được)
+                        if (result.messages && result.messages.length > 0) {
+                            console.warn("Cảnh báo từ Mammoth:", result.messages);
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error(err);
+                        showStatus('error', "❌ Lỗi đọc file: " + err.message);
+                    });
+            };
+
+            reader.onerror = function() {
+                showStatus('error', "❌ Không thể đọc file từ thiết bị của bạn.");
+            };
+
+            // Đọc file dưới dạng Buffer
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html>
         const pageEndInp = document.getElementById('page-end');
         const maxPagesSpan = document.getElementById('max-pages');
         const btnLoadText = document.getElementById('btn-load-text');
