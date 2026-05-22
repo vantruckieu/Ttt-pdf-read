@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trình Trích Xuất Truyện PDF</title>
+    <title>Trình Trích Xuất Truyện PDF (Có Mục Lục)</title>
     <!-- Thư viện PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             line-height: 1.6; 
             margin: 0; 
             padding: 15px; 
@@ -27,7 +27,6 @@
         }
         h2 { margin-top: 0; font-size: 20px; text-align: center; color: #050505; }
         
-        /* Nút chọn file thiết kế to, dễ bấm trên cảm ứng */
         .file-upload-wrapper {
             position: relative;
             overflow: hidden;
@@ -41,6 +40,7 @@
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(24, 119, 242, 0.2);
             margin-bottom: 15px;
+            cursor: pointer;
         }
         .file-upload-wrapper input[type="file"] {
             position: absolute;
@@ -51,65 +51,141 @@
             height: 100%;
             cursor: pointer;
         }
+
+        /* Khung chọn mục lục / trang */
+        .selection-panel {
+            display: none; /* Ẩn mặc định, chỉ hiện khi nạp xong file */
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .selection-panel label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .selection-panel select, .selection-panel input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
         
+        .btn-load {
+            background: #28a745;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+        }
+        .btn-load:active { background: #218838; }
+
         .status { 
             font-size: 14px; 
             color: #65676b; 
             text-align: center;
             font-weight: 500; 
+            word-wrap: break-word;
+            margin-top: 10px;
         }
         
-        /* Khung hiển thị text tối ưu cho đọc truyện */
         #output { 
             background: #ffffff; 
             padding: 20px; 
             border-radius: 12px; 
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
             min-height: 60vh; 
-            white-space: pre-wrap; /* Giữ nguyên khoảng trắng và xuống dòng */
-            font-size: 18px; /* Cỡ chữ to dễ đọc trên điện thoại */
+            font-size: 18px; 
             outline: none;
             word-wrap: break-word;
+        }
+        .page-text {
+            margin-bottom: 20px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 10px;
+            white-space: pre-wrap; 
         }
     </style>
 </head>
 <body>
 
     <div class="header-card">
-        <h2>📖 Chuyển PDF thành Chữ</h2>
+        <h2>📖 Đọc Truyện PDF Tối Ưu</h2>
         
         <div class="file-upload-wrapper">
-            <span>📂 Nhấn để chọn file PDF truyện</span>
+            <span>📂 1. Chọn file PDF truyện</span>
             <input type="file" id="pdf-upload" accept="application/pdf" />
+        </div>
+
+        <!-- Bảng điều khiển chọn Chương/Trang sẽ hiện ra sau khi file được nạp -->
+        <div id="selection-panel" class="selection-panel">
+            <div id="outline-container" style="display: none;">
+                <label>📄 2. File có Mục lục. Chọn phần muốn đọc:</label>
+                <label style="font-weight: normal; font-size: 13px;">Từ phần:</label>
+                <select id="outline-start"></select>
+                <label style="font-weight: normal; font-size: 13px;">Đến hết phần:</label>
+                <select id="outline-end"></select>
+            </div>
+
+            <div id="page-container" style="display: none;">
+                <label>📄 2. File không có Mục lục. Vui lòng nhập số trang:</label>
+                <label style="font-weight: normal; font-size: 13px;">Từ trang:</label>
+                <input type="number" id="page-start" min="1" value="1">
+                <label style="font-weight: normal; font-size: 13px;">Đến trang (Tối đa <span id="max-pages">...</span>):</label>
+                <input type="number" id="page-end" min="1" value="10">
+            </div>
+
+            <button id="btn-load-text" class="btn-load">▶️ 3. Tải Nội Dung</button>
         </div>
         
         <div id="status-message" class="status">Đang chờ file...</div>
     </div>
 
-    <!-- Khung chứa nội dung text (có thể chạm vào để sửa/xóa rác) -->
     <div id="output" contenteditable="true">Văn bản truyện sẽ hiển thị ở đây...</div>
 
     <script>
-        // Cấu hình worker cho PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const fileInput = document.getElementById('pdf-upload');
         const outputDiv = document.getElementById('output');
         const statusMsg = document.getElementById('status-message');
+        const selectionPanel = document.getElementById('selection-panel');
+        const outlineContainer = document.getElementById('outline-container');
+        const pageContainer = document.getElementById('page-container');
         
+        const outlineStartSel = document.getElementById('outline-start');
+        const outlineEndSel = document.getElementById('outline-end');
+        const pageStartInp = document.getElementById('page-start');
+        const pageEndInp = document.getElementById('page-end');
+        const maxPagesSpan = document.getElementById('max-pages');
+        const btnLoadText = document.getElementById('btn-load-text');
+
+        let currentPdf = null;
+        let totalPages = 0;
+        let outlineData = []; // Lưu trữ mảng mục lục: [{ title, pageNum }]
+
+        // Xử lý khi người dùng chọn file
         fileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (!file) return;
 
-            if (file.type !== 'application/pdf') {
-                alert("Vui lòng chọn file định dạng PDF!");
-                return;
-            }
-
             statusMsg.style.color = "#d9534f";
-            statusMsg.textContent = "⏳ Đang bóc tách chữ, vui lòng không tắt màn hình...";
-            outputDiv.innerText = "";
-            let fullText = "";
+            statusMsg.textContent = "⏳ Đang phân tích cấu trúc PDF...";
+            selectionPanel.style.display = "none";
+            outputDiv.innerHTML = "";
+            currentPdf = null;
+            outlineData = [];
             
             const fileReader = new FileReader();
             
@@ -117,43 +193,196 @@
                 const typedarray = new Uint8Array(this.result);
                 
                 try {
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let numPages = pdf.numPages;
+                    currentPdf = await pdfjsLib.getDocument({data: typedarray}).promise;
+                    totalPages = currentPdf.numPages;
                     
-                    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-                        statusMsg.textContent = `⏳ Đang xử lý trang ${pageNum} / ${numPages}...`;
-                        
-                        const page = await pdf.getPage(pageNum);
-                        const textContent = await page.getTextContent();
-                        
-                        // Lấy chữ và xử lý xuống dòng mượt hơn cho truyện
-                        let lastY = -1;
-                        let pageText = "";
-                        
-                        textContent.items.forEach(item => {
-                            if (lastY !== item.transform[5] && lastY !== -1) {
-                                pageText += "\n"; // Xuống dòng khi tọa độ Y thay đổi
-                            }
-                            pageText += item.str;
-                            lastY = item.transform[5];
-                        });
-                        
-                        fullText += pageText + "\n\n"; 
-                        outputDiv.innerText = fullText; // Cập nhật ngay lên màn hình
+                    // Thử lấy Mục Lục (Outline/Bookmarks)
+                    const outline = await currentPdf.getOutline();
+                    
+                    if (outline && outline.length > 0) {
+                        // File CÓ mục lục
+                        outlineContainer.style.display = "block";
+                        pageContainer.style.display = "none";
+                        await parseOutline(outline);
+                    } else {
+                        // File KHÔNG có mục lục
+                        outlineContainer.style.display = "none";
+                        pageContainer.style.display = "block";
+                        maxPagesSpan.textContent = totalPages;
+                        pageEndInp.max = totalPages;
+                        pageEndInp.value = Math.min(10, totalPages); // Mặc định load 10 trang cho lẹ
                     }
-                    
-                    statusMsg.style.color = "#28a745";
-                    statusMsg.textContent = `✅ Đã xử lý xong ${numPages} trang!`;
+
+                    selectionPanel.style.display = "block";
+                    statusMsg.style.color = "#1877f2";
+                    statusMsg.textContent = `✅ File nạp thành công! (${totalPages} trang). Vui lòng chọn phạm vi đọc.`;
+
                 } catch (error) {
                     console.error(error);
                     statusMsg.style.color = "#dc3545";
-                    statusMsg.textContent = "❌ Lỗi: Không thể đọc được chữ từ file PDF này (Có thể file là dạng ảnh quét).";
+                    statusMsg.textContent = "❌ Lỗi đọc file PDF: " + error.message;
                 }
             };
             
             fileReader.readAsArrayBuffer(file);
         });
+
+        // Hàm đệ quy bóc tách dữ liệu Mục lục
+        async function parseOutline(outlineItems) {
+            outlineStartSel.innerHTML = "";
+            outlineEndSel.innerHTML = "";
+            outlineData = [];
+
+            // Duyệt qua cây mục lục để lấy Tên và số Trang
+            async function traverse(items, depth = "") {
+                for (let item of items) {
+                    let pageNum = null;
+                    if (item.dest) {
+                        // PDF.js trả về dest là tên hoặc mảng. Phải phân giải để lấy số trang thực.
+                        const destArray = typeof item.dest === 'string' ? await currentPdf.getDestination(item.dest) : item.dest;
+                        if (destArray && destArray[0]) {
+                            const pageRef = destArray[0];
+                            // Lấy số thứ tự trang từ pageRef
+                            const pageIndex = await currentPdf.getPageIndex(pageRef);
+                            pageNum = pageIndex + 1; // getPageIndex bắt đầu từ 0
+                        }
+                    }
+                    
+                    if (pageNum !== null) {
+                        outlineData.push({ title: depth + item.title, pageNum: pageNum });
+                    }
+
+                    if (item.items && item.items.length > 0) {
+                        await traverse(item.items, depth + "— ");
+                    }
+                }
+            }
+
+            statusMsg.textContent = "⏳ Đang trích xuất Mục Lục...";
+            await traverse(outline);
+
+            if (outlineData.length === 0) {
+                // Nếu mục lục rỗng hoặc lỗi tham chiếu trang, fallback về chọn số trang thủ công
+                outlineContainer.style.display = "none";
+                pageContainer.style.display = "block";
+                maxPagesSpan.textContent = totalPages;
+                pageEndInp.value = Math.min(10, totalPages);
+                return;
+            }
+
+            // Đổ dữ liệu vào 2 ô Select
+            outlineData.forEach((item, index) => {
+                let optStart = document.createElement('option');
+                optStart.value = index;
+                optStart.textContent = `[Trang ${item.pageNum}] ${item.title}`;
+                outlineStartSel.appendChild(optStart);
+
+                let optEnd = document.createElement('option');
+                optEnd.value = index;
+                optEnd.textContent = `[Trang ${item.pageNum}] ${item.title}`;
+                outlineEndSel.appendChild(optEnd);
+            });
+
+            // Mặc định ô End trỏ vào phần tử tiếp theo hoặc cuối cùng
+            if (outlineData.length > 1) {
+                outlineEndSel.value = 1; 
+            } else {
+                outlineEndSel.value = 0;
+            }
+        }
+
+        // Bắt sự kiện bấm nút Tải Nội Dung
+        btnLoadText.addEventListener('click', async () => {
+            if (!currentPdf) return;
+
+            let startPage = 1;
+            let endPage = 1;
+
+            if (outlineContainer.style.display === "block") {
+                // Lấy trang từ Outline
+                let startIndex = parseInt(outlineStartSel.value);
+                let endIndex = parseInt(outlineEndSel.value);
+                
+                if (startIndex > endIndex) {
+                    alert("Phần kết thúc phải nằm sau phần bắt đầu!");
+                    return;
+                }
+
+                startPage = outlineData[startIndex].pageNum;
+                // EndPage sẽ là trang của Outline kết thúc. 
+                // (Nếu muốn load đến tận sát Outline tiếp theo thì phức tạp hơn, ta tạm load đến đúng trang bắt đầu của Outline End)
+                // Để cover hết nội dung của mục cuối cùng được chọn, lấy trang của mục End (hoặc mục End + 1 tùy ý), ở đây ta lấy trang của Outline End.
+                // Tối ưu: Nếu muốn đọc hết mục End, ta lấy trang của outline(End + 1) - 1. Nếu End là mục cuối, lấy totalPages.
+                if (endIndex + 1 < outlineData.length) {
+                    endPage = outlineData[endIndex + 1].pageNum - 1;
+                } else {
+                    endPage = totalPages;
+                }
+
+                // Chống dính trang âm
+                if (endPage < startPage) endPage = startPage;
+
+            } else {
+                // Lấy trang từ Input
+                startPage = parseInt(pageStartInp.value);
+                endPage = parseInt(pageEndInp.value);
+                
+                if (startPage < 1) startPage = 1;
+                if (endPage > totalPages) endPage = totalPages;
+                if (startPage > endPage) {
+                    alert("Trang bắt đầu không thể lớn hơn trang kết thúc!");
+                    return;
+                }
+            }
+
+            // Bắt đầu trích xuất
+            outputDiv.innerHTML = "";
+            statusMsg.style.color = "#d9534f";
+            btnLoadText.disabled = true;
+            btnLoadText.style.background = "#ccc";
+
+            try {
+                for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
+                    statusMsg.textContent = `⏳ Đang bóc text trang ${pageNum} / ${endPage}...`;
+                    
+                    const page = await currentPdf.getPage(pageNum);
+                    const textContent = await page.getTextContent();
+                    
+                    let lastY = -1;
+                    let pageText = "";
+                    
+                    textContent.items.forEach(item => {
+                        if (lastY !== item.transform[5] && lastY !== -1) {
+                            pageText += "\n";
+                        }
+                        pageText += item.str;
+                        lastY = item.transform[5];
+                    });
+                    
+                    if (pageText.trim().length > 0) {
+                        const pageDiv = document.createElement('div');
+                        pageDiv.className = 'page-text';
+                        pageDiv.innerText = `--- [Trang ${pageNum}] ---\n` + pageText;
+                        outputDiv.appendChild(pageDiv);
+                    }
+                    
+                    // Yield thread cho điện thoại
+                    if (pageNum % 5 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 5));
+                    }
+                }
+                
+                statusMsg.style.color = "#28a745";
+                statusMsg.textContent = `✅ Hoàn thành load từ trang ${startPage} đến ${endPage}!`;
+            } catch (error) {
+                console.error(error);
+                statusMsg.style.color = "#dc3545";
+                statusMsg.textContent = "❌ Lỗi trích xuất: " + error.message;
+            } finally {
+                btnLoadText.disabled = false;
+                btnLoadText.style.background = "#28a745";
+            }
+        });
     </script>
 </body>
 </html>
-
