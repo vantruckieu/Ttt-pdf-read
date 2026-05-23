@@ -1,328 +1,338 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Trình Đọc Truyện DOCX (Siêu Nhẹ)</title>
-    
-    <!-- Sử dụng thư viện Mammoth.js chuyên dụng để đọc file DOCX -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
-    
-    <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            line-height: 1.6; 
-            margin: 0; 
-            padding: 15px; 
-            background-color: #f0f2f5; 
-            color: #1c1e21; 
-        }
-        .header-card { 
-            background: #ffffff; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            margin-bottom: 20px; 
-            position: sticky; 
-            top: 10px; 
-            z-index: 100; 
-        }
-        h2 { margin-top: 0; font-size: 20px; text-align: center; color: #050505; }
-        
-        .file-upload-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: block;
-            background: #1877f2;
-            color: white;
-            text-align: center;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(24, 119, 242, 0.2);
-            margin-bottom: 15px;
-            cursor: pointer;
-        }
-        .file-upload-wrapper input[type="file"] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trình đọc truyện DOCX</title>
 
-        .status { 
-            font-size: 14px; text-align: center; font-weight: bold; 
-            word-wrap: break-word; margin-top: 10px; padding: 10px; border-radius: 4px;
-        }
-        .status.error { background: #ffe6e6; color: #dc3545; border: 1px solid #dc3545; }
-        .status.success { background: #e6ffe6; color: #28a745; border: 1px solid #28a745; }
-        .status.loading { background: #e6f2ff; color: #0056b3; border: 1px solid #0056b3; }
-        
-        #output { 
-            background: #ffffff; padding: 20px; border-radius: 12px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); min-height: 60vh; font-size: 18px; 
-            outline: none; word-wrap: break-word;
-        }
-        
-        /* Căn chỉnh lại văn bản DOCX khi hiển thị để đọc truyện dễ hơn */
-        #output p { margin-bottom: 15px; }
-        #output h1, #output h2, #output h3 { color: #1877f2; margin-top: 30px; }
-    </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --border: #e5e7eb;
+      --ok-bg: #ecfdf3;
+      --ok: #15803d;
+      --warn-bg: #fff7ed;
+      --warn: #b45309;
+      --err-bg: #fef2f2;
+      --err: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.65;
+    }
+
+    .app {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(17, 24, 39, 0.05);
+    }
+
+    .header {
+      position: sticky;
+      top: 8px;
+      z-index: 10;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(18px, 4.8vw, 24px);
+      margin: 0 0 10px 0;
+    }
+
+    .muted { color: var(--muted); font-size: 13px; margin: 0 0 12px 0; }
+
+    .upload {
+      display: block;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      text-align: center;
+      font-weight: 700;
+      padding: 14px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload:hover { background: var(--primary-dark); }
+
+    .upload input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 10px;
+    }
+
+    .field label {
+      font-size: 12px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 16px;
+      background: #fff;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      background: #111827;
+      color: #fff;
+      font-weight: 700;
+      padding: 11px 14px;
+      font-size: 15px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      word-break: break-word;
+    }
+
+    .status.success { background: var(--ok-bg); color: var(--ok); border-color: #bbf7d0; }
+    .status.loading { background: var(--warn-bg); color: var(--warn); border-color: #fed7aa; }
+    .status.error { background: var(--err-bg); color: var(--err); border-color: #fecaca; }
+
+    .reader {
+      padding: 14px;
+      min-height: 58vh;
+      font-size: clamp(17px, 4.2vw, 20px);
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .reader p { margin: 0 0 1em; }
+    .reader h1, .reader h2, .reader h3 { color: var(--primary); margin-top: 1.4em; }
+
+    @media (max-width: 700px) {
+      .controls { grid-template-columns: 1fr 1fr; }
+      .controls .btn { grid-column: 1 / -1; width: 100%; }
+      .app { padding: 10px; }
+      .header, .reader { padding: 12px; }
+    }
+  </style>
 </head>
 <body>
+  <main class="app">
+    <section class="header card">
+      <h1>📖 Trình đọc truyện từ DOCX</h1>
+      <p class="muted">Chọn file DOCX, sau đó nhập khoảng trang muốn đọc (ví dụ: 10 → 100).</p>
 
-    <div class="header-card">
-        <h2>📖 Trình Đọc DOCX Truyện</h2>
-        
-        <div class="file-upload-wrapper">
-            <span>📂 Chạm vào đây để chọn file DOCX</span>
-            <input type="file" id="docx-upload" accept=".docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+      <label class="upload">
+        📂 Chạm để chọn file DOCX
+        <input
+          type="file"
+          id="docx-upload"
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        />
+      </label>
+
+      <div class="controls">
+        <div class="field">
+          <label for="page-start">Trang bắt đầu</label>
+          <input type="number" id="page-start" min="1" value="1" inputmode="numeric" />
         </div>
-        
-        <div id="status-message" class="status loading">Đang kiểm tra hệ thống...</div>
-    </div>
 
-    <div id="output" contenteditable="true">Nội dung truyện sẽ hiện ở đây, mượt mà và không lo tràn RAM...</div>
+        <div class="field">
+          <label for="page-end">Trang kết thúc</label>
+          <input type="number" id="page-end" min="1" value="1" inputmode="numeric" />
+        </div>
 
-    <script>
-        const fileInput = document.getElementById('docx-upload');
-        const outputDiv = document.getElementById('output');
-        const statusMsg = document.getElementById('status-message');
+        <button id="btn-read-range" class="btn" disabled>Đọc theo khoảng trang</button>
+      </div>
 
-        function showStatus(type, text) {
-            statusMsg.className = `status ${type}`;
-            statusMsg.textContent = text;
-        }
+      <div id="status-message" class="status loading">Đang kiểm tra hệ thống...</div>
+    </section>
 
-        window.onload = function() {
-            if (typeof mammoth === 'undefined') {
-                showStatus('error', '❌ Lỗi: Không tải được thư viện xử lý. Vui lòng kiểm tra mạng.');
-            } else {
-                showStatus('success', '✅ Hệ thống đã sẵn sàng. Vui lòng chọn file DOCX.');
+    <section id="output" class="reader">Nội dung truyện sẽ hiển thị ở đây.</section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById('docx-upload');
+    const outputDiv = document.getElementById('output');
+    const statusMsg = document.getElementById('status-message');
+    const pageStartInput = document.getElementById('page-start');
+    const pageEndInput = document.getElementById('page-end');
+    const readRangeBtn = document.getElementById('btn-read-range');
+
+    let fullHtmlContent = '';
+    let fullTextContent = '';
+
+    function showStatus(type, text) {
+      statusMsg.className = `status ${type}`;
+      statusMsg.textContent = text;
+    }
+
+    // Heuristic phân trang theo ký tự để mô phỏng trang Word.
+    // DOCX không lưu "số trang thực" một cách ổn định khi parse qua Mammoth.
+    const CHARS_PER_PAGE = 1800;
+
+    function estimateTotalPagesFromText(text) {
+      const clean = (text || '').trim();
+      if (!clean) return 0;
+      return Math.max(1, Math.ceil(clean.length / CHARS_PER_PAGE));
+    }
+
+    function renderPageRange(startPage, endPage) {
+      const cleaned = fullTextContent.trim();
+      if (!cleaned) {
+        showStatus('error', '❌ File không có nội dung văn bản để hiển thị.');
+        outputDiv.textContent = '';
+        return;
+      }
+
+      const totalPages = estimateTotalPagesFromText(cleaned);
+      if (startPage < 1 || endPage < 1 || startPage > endPage) {
+        showStatus('error', '❌ Khoảng trang không hợp lệ.');
+        return;
+      }
+      if (startPage > totalPages) {
+        showStatus('error', `❌ Trang bắt đầu vượt quá tổng số trang ước lượng (${totalPages}).`);
+        return;
+      }
+
+      const safeEnd = Math.min(endPage, totalPages);
+      const startIdx = (startPage - 1) * CHARS_PER_PAGE;
+      const endIdx = safeEnd * CHARS_PER_PAGE;
+      const slice = cleaned.slice(startIdx, endIdx).trim();
+
+      if (!slice) {
+        showStatus('error', '❌ Không có nội dung trong khoảng trang đã chọn.');
+        return;
+      }
+
+      const paras = slice
+        .split(/\n{2,}|\r\n{2,}/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(p => `<p>${p.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`)
+        .join('');
+
+      outputDiv.innerHTML = paras || `<p>${slice.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
+      showStatus('success', `✅ Đang hiển thị trang ${startPage} đến ${safeEnd} / ${totalPages} (ước lượng).`);
+    }
+
+    window.onload = function() {
+      if (typeof mammoth === 'undefined') {
+        showStatus('error', '❌ Không tải được thư viện Mammoth. Vui lòng kiểm tra mạng.');
+      } else {
+        showStatus('success', '✅ Sẵn sàng. Hãy chọn file DOCX để bắt đầu.');
+      }
+    };
+
+    fileInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      showStatus('loading', '⏳ Đang đọc file DOCX...');
+      outputDiv.textContent = '';
+      readRangeBtn.disabled = true;
+
+      const reader = new FileReader();
+      reader.onload = function(loadEvent) {
+        const arrayBuffer = loadEvent.target.result;
+
+        mammoth.extractRawText({ arrayBuffer })
+          .then(raw => {
+            fullTextContent = raw.value || '';
+            return mammoth.convertToHtml({ arrayBuffer });
+          })
+          .then(result => {
+            fullHtmlContent = result.value || '';
+
+            if (!fullTextContent.trim()) {
+              showStatus('error', '❌ File DOCX không có chữ hoặc bị lỗi mã hóa.');
+              return;
             }
-        };
 
-        fileInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const totalPages = estimateTotalPagesFromText(fullTextContent);
+            pageStartInput.value = '1';
+            pageEndInput.value = String(Math.min(10, totalPages));
+            pageStartInput.max = String(totalPages);
+            pageEndInput.max = String(totalPages);
+            readRangeBtn.disabled = false;
 
-            showStatus('loading', "⏳ Đang giải nén và đọc nội dung file DOCX...");
-            outputDiv.innerHTML = "";
+            outputDiv.innerHTML = fullHtmlContent;
+            showStatus('success', `✅ Đã tải xong. Tổng số trang ước lượng: ${totalPages}. Nhập khoảng trang để đọc.`);
 
-            const reader = new FileReader();
+            if (result.messages && result.messages.length > 0) {
+              console.warn('Cảnh báo từ Mammoth:', result.messages);
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            showStatus('error', '❌ Lỗi đọc file: ' + err.message);
+          });
+      };
 
-            reader.onload = function(loadEvent) {
-                const arrayBuffer = loadEvent.target.result;
+      reader.onerror = function() {
+        showStatus('error', '❌ Không thể đọc file từ thiết bị của bạn.');
+      };
 
-                // Mammoth convert DOCX sang HTML siêu nhanh
-                mammoth.convertToHtml({arrayBuffer: arrayBuffer})
-                    .then(function(result) {
-                        const htmlContent = result.value; 
-                        
-                        if (htmlContent.trim() === "") {
-                            showStatus('error', "❌ File DOCX không có chữ hoặc bị lỗi mã hóa.");
-                            return;
-                        }
+      reader.readAsArrayBuffer(file);
+    });
 
-                        // Đẩy toàn bộ HTML vào khung hiển thị
-                        outputDiv.innerHTML = htmlContent;
-                        showStatus('success', '✅ Tải xong thành công! Bạn có thể bắt đầu đọc.');
-                        
-                        // Nếu có cảnh báo từ file gốc (vd: ảnh bị lỗi không hiển thị được)
-                        if (result.messages && result.messages.length > 0) {
-                            console.warn("Cảnh báo từ Mammoth:", result.messages);
-                        }
-                    })
-                    .catch(function(err) {
-                        console.error(err);
-                        showStatus('error', "❌ Lỗi đọc file: " + err.message);
-                    });
-            };
+    readRangeBtn.addEventListener('click', function() {
+      if (!fullTextContent.trim()) {
+        showStatus('error', '❌ Bạn chưa tải file DOCX.');
+        return;
+      }
 
-            reader.onerror = function() {
-                showStatus('error', "❌ Không thể đọc file từ thiết bị của bạn.");
-            };
-
-            // Đọc file dưới dạng Buffer
-            reader.readAsArrayBuffer(file);
-        });
-    </script>
+      const start = Number(pageStartInput.value);
+      const end = Number(pageEndInput.value);
+      renderPageRange(start, end);
+    });
+  </script>
 </body>
 </html>
-        const pageEndInp = document.getElementById('page-end');
-        const maxPagesSpan = document.getElementById('max-pages');
-        const btnLoadText = document.getElementById('btn-load-text');
-
-        let currentPdf = null;
-        let totalPages = 0;
-        let outlineData = [];
-
-        function showStatus(type, text) {
-            statusMsg.className = `status ${type}`;
-            statusMsg.textContent = text;
-        }
-
-        // 1. Kiểm tra xem JavaScript có chạy không
-        window.onload = function() {
-            if (typeof pdfjsLib === 'undefined') {
-                showStatus('error', '❌ Lỗi: Trình duyệt chặn tải PDF.js. Vui lòng tắt chặn quảng cáo hoặc đổi mạng.');
-            } else {
-                showStatus('success', '✅ Hệ thống đã sẵn sàng. Vui lòng chọn file.');
-            }
-        };
-
-        // 2. Xử lý khi chọn file (Bắt lỗi ngay lập tức)
-        fileInput.addEventListener('change', async (event) => {
-            try {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                // Hiện status NGAY LẬP TỨC để báo hiệu có phản hồi
-                showStatus('loading', "⏳ Đã nhận file. Đang khởi động bộ giải mã...");
-                selectionPanel.style.display = "none";
-                outputDiv.innerHTML = "";
-                
-                // Khởi tạo worker bên trong block này để bắt lỗi
-                if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.worker.min.js';
-                }
-
-                const fileUrl = URL.createObjectURL(file);
-                showStatus('loading', "⏳ Đang quét cấu trúc file (có thể mất vài giây)...");
-                
-                const loadingTask = pdfjsLib.getDocument({url: fileUrl});
-                currentPdf = await loadingTask.promise;
-                totalPages = currentPdf.numPages;
-                
-                const outline = await currentPdf.getOutline();
-                
-                if (outline && outline.length > 0) {
-                    outlineContainer.style.display = "block";
-                    pageContainer.style.display = "none";
-                    await parseOutline(outline);
-                } else {
-                    outlineContainer.style.display = "none";
-                    pageContainer.style.display = "block";
-                    maxPagesSpan.textContent = totalPages;
-                    pageEndInp.max = totalPages;
-                    pageEndInp.value = Math.min(10, totalPages); 
-                }
-
-                selectionPanel.style.display = "block";
-                showStatus('success', `✅ File hợp lệ (${totalPages} trang). Vui lòng chọn giới hạn đọc!`);
-
-            } catch (error) {
-                console.error("Lỗi nạp file:", error);
-                showStatus('error', "❌ Lỗi đọc file: " + (error.message || "Không rõ nguyên nhân"));
-            }
-        });
-
-        // 3. Hàm trích xuất mục lục
-        async function parseOutline(outlineItems) {
-            outlineStartSel.innerHTML = ""; outlineEndSel.innerHTML = ""; outlineData = [];
-
-            async function traverse(items, depth = "") {
-                for (let item of items) {
-                    let pageNum = null;
-                    try {
-                        if (item.dest) {
-                            const destArray = typeof item.dest === 'string' ? await currentPdf.getDestination(item.dest) : item.dest;
-                            if (destArray && destArray[0]) {
-                                const pageIndex = await currentPdf.getPageIndex(destArray[0]);
-                                pageNum = pageIndex + 1;
-                            }
-                        }
-                    } catch (e) {} 
-                    
-                    if (pageNum !== null) {
-                        outlineData.push({ title: depth + item.title, pageNum: pageNum });
-                    }
-                    if (item.items && item.items.length > 0) await traverse(item.items, depth + "— ");
-                }
-            }
-
-            await traverse(outlineItems);
-
-            if (outlineData.length === 0) {
-                outlineContainer.style.display = "none";
-                pageContainer.style.display = "block";
-                maxPagesSpan.textContent = totalPages;
-                pageEndInp.value = Math.min(10, totalPages);
-                return;
-            }
-
-            outlineData.forEach((item, index) => {
-                let optStart = document.createElement('option');
-                optStart.value = index; optStart.textContent = `[Trang ${item.pageNum}] ${item.title}`;
-                outlineStartSel.appendChild(optStart);
-
-                let optEnd = document.createElement('option');
-                optEnd.value = index; optEnd.textContent = `[Trang ${item.pageNum}] ${item.title}`;
-                outlineEndSel.appendChild(optEnd);
-            });
-            outlineEndSel.value = outlineData.length > 1 ? 1 : 0;
-        }
-
-        // 4. Nút bấm load chữ
-        btnLoadText.addEventListener('click', async () => {
-            if (!currentPdf) return;
-
-            let startPage = 1, endPage = 1;
-
-            if (outlineContainer.style.display === "block") {
-                let startIndex = parseInt(outlineStartSel.value);
-                let endIndex = parseInt(outlineEndSel.value);
-                if (startIndex > endIndex) return alert("Phần kết thúc phải nằm sau phần bắt đầu!");
-                startPage = outlineData[startIndex].pageNum;
-                endPage = (endIndex + 1 < outlineData.length) ? outlineData[endIndex + 1].pageNum - 1 : totalPages;
-                if (endPage < startPage) endPage = startPage;
-            } else {
-                startPage = parseInt(pageStartInp.value);
-                endPage = parseInt(pageEndInp.value);
-                if (startPage < 1) startPage = 1;
-                if (endPage > totalPages) endPage = totalPages;
-                if (startPage > endPage) return alert("Trang bắt đầu không thể lớn hơn trang kết thúc!");
-            }
-
-            outputDiv.innerHTML = "";
-            btnLoadText.disabled = true;
-
-            try {
-                for (let pageNum = startPage; pageNum <= endPage; pageNum++) {
-                    showStatus('loading', `⏳ Đang đọc chữ trang ${pageNum} / ${endPage}...`);
-                    
-                    const page = await currentPdf.getPage(pageNum);
-                    const textContent = await page.getTextContent();
-                    
-                    let lastY = -1; let pageText = "";
-                    textContent.items.forEach(item => {
-                        if (lastY !== item.transform[5] && lastY !== -1) pageText += "\n";
-                        pageText += item.str; lastY = item.transform[5];
-                    });
-                    
-                    if (pageText.trim().length > 0) {
-                        const pageDiv = document.createElement('div');
-                        pageDiv.className = 'page-text';
-                        pageDiv.innerText = `--- [Trang ${pageNum}] ---\n` + pageText;
-                        outputDiv.appendChild(pageDiv);
-                    }
-                    
-                    page.cleanup();
-                    // Chống treo máy
-                    if (pageNum % 2 === 0) await new Promise(resolve => setTimeout(resolve, 10));
-                }
-                showStatus('success', `✅ Hoàn tất tải từ trang ${startPage} đến ${endPage}!`);
-            } catch (error) {
-                showStatus('error', "❌ Lỗi hiển thị chữ: " + error.message);
-            } finally {
-                btnLoadText.disabled = false;
-            }
-        });
-    </script>
-</body>
-</html>
-
